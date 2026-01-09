@@ -1,5 +1,10 @@
 <?php
+// Session configuration (must be set before session_start)
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_secure', 0); // Set to 1 if using HTTPS
+    @session_save_path('/tmp');
     session_start();
 }
 

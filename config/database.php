@@ -22,12 +22,6 @@ define('BANNER_UPLOAD_DIR', UPLOAD_DIR . 'banners/');
 define('MAX_UPLOAD_SIZE', 5242880); // 5MB
 define('ALLOWED_IMAGE_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
 
-// Session settings
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_secure', 0); // Set to 1 if using HTTPS
-session_save_path('/tmp');
-
 // Error reporting (disable in production)
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -40,17 +34,28 @@ function getDBConnection() {
     static $pdo = null;
     
     if ($pdo === null) {
-        try {
-            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-            $options = [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ];
-            
-            $pdo = new PDO($dsn, DB_USER, DB_PASSWORD, $options);
-        } catch (PDOException $e) {
-            die("Database connection failed: " . $e->getMessage());
+        $maxRetries = 5;
+        $retryDelay = 2; // seconds
+        $attempt = 0;
+        
+        while ($attempt < $maxRetries) {
+            try {
+                $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+                $options = [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ];
+                
+                $pdo = new PDO($dsn, DB_USER, DB_PASSWORD, $options);
+                break; // Connection successful
+            } catch (PDOException $e) {
+                $attempt++;
+                if ($attempt >= $maxRetries) {
+                    die("Database connection failed after {$maxRetries} attempts: " . $e->getMessage());
+                }
+                sleep($retryDelay);
+            }
         }
     }
     
