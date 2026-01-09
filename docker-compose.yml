@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PHP + Apache Web Server
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pc_shop_web
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    volumes:
+      # Mount source code
+      - ./:/var/www/html
+      # Mount uploads directory
+      - ./public/uploads:/var/www/html/public/uploads
+    environment:
+      - DB_HOST=db
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - db
+    networks:
+      - pc_shop_network
+    restart: unless-stopped
+
+  # MySQL/MariaDB Database
+  db:
+    image: mariadb:10.11
+    container_name: pc_shop_db
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      # Persist database data
+      - db_data:/var/lib/mysql
+      # Import schema on first run
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    networks:
+      - pc_shop_network
+    restart: unless-stopped
+
+  # phpMyAdmin for database management
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: pc_shop_phpmyadmin
+    ports:
+      - "${PMA_PORT:-8081}:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_PORT=3306
+      - PMA_USER=${DB_USER}
+      - PMA_PASSWORD=${DB_PASSWORD}
+      - UPLOAD_LIMIT=50M
+    depends_on:
+      - db
+    networks:
+      - pc_shop_network
+    restart: unless-stopped
+
+networks:
+  pc_shop_network:
+    driver: bridge
+
+volumes:
+  db_data:
+    driver: local

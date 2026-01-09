@@ -1,0 +1,14 @@
+GIỮTHÔNG TIN
+
+THỰC THI:
+
+docker-compose up -d --build
+
+DỪNG LẠI:
+
+docker-compose down
+
+TẠO LẠI:
+
+docker-compose down -v
+docker-compose up -d --build
